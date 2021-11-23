@@ -76,7 +76,6 @@ public class FixedActivityHandler extends ActivityHandler {
      */
     Object obj = activity.getValue();
     AdaptiveCardInvokeValue invokeValue = null;
-    LOGGER.error("obj type: " + obj.getClass().getName());
     if (obj instanceof JsonNode) {
       invokeValue = Serialization.treeToValue((JsonNode) obj, AdaptiveCardInvokeValue.class);
     } else if (obj instanceof Map) {
