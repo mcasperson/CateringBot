@@ -4,6 +4,8 @@
 package com.matthewcasperson;
 
 import com.microsoft.bot.builder.Bot;
+import com.microsoft.bot.builder.ConversationState;
+import com.microsoft.bot.builder.UserState;
 import com.microsoft.bot.integration.AdapterWithErrorHandler;
 import com.microsoft.bot.integration.BotFrameworkHttpAdapter;
 import com.microsoft.bot.integration.Configuration;
@@ -48,8 +50,8 @@ public class Application extends BotDependencyConfiguration {
      * @return The Bot implementation for this application.
      */
     @Bean
-    public Bot getBot() {
-        return new CateringBot();
+    public Bot getBot(final ConversationState conversationState, final UserState userState) {
+        return new CateringBot(conversationState, userState);
     }
 
     /**
@@ -59,7 +61,7 @@ public class Application extends BotDependencyConfiguration {
      * @return An error handling BotFrameworkHttpAdapter.
      */
     @Override
-    public BotFrameworkHttpAdapter getBotFrameworkHttpAdaptor(Configuration configuration) {
+    public BotFrameworkHttpAdapter getBotFrameworkHttpAdaptor(final Configuration configuration) {
         return new AdapterWithErrorHandler(configuration);
     }
 }

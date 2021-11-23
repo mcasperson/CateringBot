@@ -4,22 +4,19 @@
 package com.matthewcasperson;
 
 import com.codepoetics.protonpack.collectors.CompletableFutures;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Charsets;
-import com.google.common.io.Files;
 import com.google.common.io.Resources;
-import com.google.common.reflect.TypeToken;
 import com.google.gson.Gson;
-import com.google.gson.JsonParser;
 import com.microsoft.bot.builder.ActivityHandler;
+import com.microsoft.bot.builder.ConversationState;
 import com.microsoft.bot.builder.MessageFactory;
 import com.microsoft.bot.builder.TurnContext;
+import com.microsoft.bot.builder.UserState;
+import com.microsoft.bot.schema.AdaptiveCardInvokeResponse;
+import com.microsoft.bot.schema.AdaptiveCardInvokeValue;
 import com.microsoft.bot.schema.Attachment;
 import com.microsoft.bot.schema.ChannelAccount;
-import java.io.File;
 import java.io.IOException;
-import java.lang.reflect.Type;
-import java.util.HashMap;
 import java.util.Map;
 import org.apache.commons.lang3.StringUtils;
 
@@ -38,6 +35,13 @@ import java.util.concurrent.CompletableFuture;
 public class CateringBot extends ActivityHandler {
 
   private static final String CONTENT_TYPE = "application/vnd.microsoft.card.adaptive";
+  private final ConversationState conversationState;
+  private final UserState userState;
+
+  public CateringBot(final ConversationState conversationState, final UserState userState) {
+    this.userState = userState;
+    this.conversationState = conversationState;
+  }
 
   @Override
   protected CompletableFuture<Void> onMessageActivity(TurnContext turnContext) {
@@ -53,6 +57,19 @@ public class CateringBot extends ActivityHandler {
   }
 
   @Override
+  protected CompletableFuture<AdaptiveCardInvokeResponse> onAdaptiveCardInvoke(
+      TurnContext turnContext, AdaptiveCardInvokeValue invokeValue) {
+    try {
+      final AdaptiveCardInvokeResponse response = new AdaptiveCardInvokeResponse();
+      response.setType(CONTENT_TYPE);
+      response.setValue(createObjectFromJsonResource("cards/InputField.json"));
+      return CompletableFuture.completedFuture(response);
+    } catch (final Exception ex) {
+      return CompletableFuture.failedFuture(ex);
+    }
+  }
+
+  @Override
   protected CompletableFuture<Void> onMembersAdded(
       List<ChannelAccount> membersAdded,
       TurnContext turnContext
@@ -61,19 +78,22 @@ public class CateringBot extends ActivityHandler {
         .filter(
             member -> !StringUtils
                 .equals(member.getId(), turnContext.getActivity().getRecipient().getId())
-        ).map(channel -> turnContext.sendActivity(MessageFactory.text("Hello and welcome!")))
+        ).map(channel -> turnContext.sendActivity(MessageFactory.text(
+            "Hello and welcome! Type any message to begin placing a lunch order.")))
         .collect(CompletableFutures.toFutureList()).thenApply(resourceResponses -> null);
   }
 
   private Attachment createCardAttachment(final String fileName) throws IOException {
-    final String resource = readResource(fileName);
     final Attachment attachment = new Attachment();
     attachment.setContentType(CONTENT_TYPE);
-
-    Map<String, String[]> son = new Gson().fromJson(resource, Map.class);
-
-    attachment.setContent(son);
+    attachment.setContent(createObjectFromJsonResource(fileName));
     return attachment;
+  }
+
+  private Object createObjectFromJsonResource(final String fileName) throws IOException {
+    final String resource = readResource(fileName);
+    final Map<String, String[]> objectMap = new Gson().fromJson(resource, Map.class);
+    return objectMap;
   }
 
   private String readResource(final String fileName) throws IOException {
