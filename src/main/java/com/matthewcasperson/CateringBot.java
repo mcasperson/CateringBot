@@ -7,6 +7,7 @@ import com.codepoetics.protonpack.collectors.CompletableFutures;
 import com.google.common.base.Charsets;
 import com.google.common.io.Resources;
 import com.google.gson.Gson;
+import com.matthewcasperson.models.CardOptions;
 import com.microsoft.bot.builder.ActivityHandler;
 import com.microsoft.bot.builder.ConversationState;
 import com.microsoft.bot.builder.MessageFactory;
@@ -60,6 +61,10 @@ public class CateringBot extends ActivityHandler {
   protected CompletableFuture<AdaptiveCardInvokeResponse> onAdaptiveCardInvoke(
       TurnContext turnContext, AdaptiveCardInvokeValue invokeValue) {
     try {
+      if ("order".equals(invokeValue.getAction().getVerb())) {
+
+      }
+
       final AdaptiveCardInvokeResponse response = new AdaptiveCardInvokeResponse();
       response.setType(CONTENT_TYPE);
       response.setValue(createObjectFromJsonResource("cards/InputField.json"));
