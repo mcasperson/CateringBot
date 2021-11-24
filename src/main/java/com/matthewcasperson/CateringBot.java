@@ -20,7 +20,12 @@ import com.microsoft.bot.schema.AdaptiveCardInvokeResponse;
 import com.microsoft.bot.schema.AdaptiveCardInvokeValue;
 import com.microsoft.bot.schema.Attachment;
 import com.microsoft.bot.schema.ChannelAccount;
+import com.mitchellbosecke.pebble.PebbleEngine;
+import com.mitchellbosecke.pebble.template.PebbleTemplate;
 import java.io.IOException;
+import java.io.StringWriter;
+import java.io.Writer;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -47,6 +52,14 @@ public class CateringBot extends FixedActivityHandler {
   public CateringBot(final ConversationState conversationState, final UserState userState) {
     this.userState = userState;
     this.conversationState = conversationState;
+  }
+
+  @Override
+  public CompletableFuture<Void> onTurn(TurnContext turnContext) {
+    return super.onTurn(turnContext)
+        // Save any state changes that might have occurred during the turn.
+        .thenCompose(turnResult -> conversationState.saveChanges(turnContext))
+        .thenCompose(saveResult -> userState.saveChanges(turnContext));
   }
 
   @Override
@@ -94,7 +107,12 @@ public class CateringBot extends FixedActivityHandler {
         response.setStatusCode(200);
         response.setType(CONTENT_TYPE);
         response.setValue(createObjectFromJsonResource(
-            Cards.findValueByTypeNumber(cardOptions.getNextCardToSend()).file));
+            Cards.findValueByTypeNumber(cardOptions.getNextCardToSend()).file,
+            new HashMap<String, Object>() {{
+              put("drink", lunchOrder.drink);
+              put("entre", lunchOrder.entre);
+            }}));
+
         return CompletableFuture.completedFuture(response);
       }
 
@@ -123,16 +141,34 @@ public class CateringBot extends FixedActivityHandler {
   }
 
   private Attachment createCardAttachment(final String fileName) throws IOException {
+    return createCardAttachment(fileName, null);
+  }
+
+  private Attachment createCardAttachment(final String fileName, final Map<String, Object> context)
+      throws IOException {
     final Attachment attachment = new Attachment();
     attachment.setContentType(CONTENT_TYPE);
-    attachment.setContent(createObjectFromJsonResource(fileName));
+    attachment.setContent(createObjectFromJsonResource(fileName, context));
     return attachment;
   }
 
-  private Object createObjectFromJsonResource(final String fileName) throws IOException {
+  private Object createObjectFromJsonResource(final String fileName,
+      final Map<String, Object> context) throws IOException {
     final String resource = readResource(fileName);
-    final Map<String, String[]> objectMap = new Gson().fromJson(resource, Map.class);
+    final String processedResource = context == null
+        ? resource
+        : processTemplate(resource, context);
+    final Map<String, String[]> objectMap = new Gson().fromJson(processedResource, Map.class);
     return objectMap;
+  }
+
+  private String processTemplate(final String template, final Map<String, Object> context)
+      throws IOException {
+    final PebbleEngine engine = new PebbleEngine.Builder().build();
+    final PebbleTemplate compiledTemplate = engine.getLiteralTemplate(template);
+    final Writer writer = new StringWriter();
+    compiledTemplate.evaluate(writer, context);
+    return writer.toString();
   }
 
   private String readResource(final String fileName) throws IOException {
