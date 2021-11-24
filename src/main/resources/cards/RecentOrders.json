@@ -68,7 +68,7 @@
               "items": [
                 {
                   "type": "TextBlock",
-                  "text": "{lunch.orderTimestamp}"
+                  "text": "${orderCreated}"
                 }
               ]
             },
@@ -78,7 +78,7 @@
               "items": [
                 {
                   "type": "TextBlock",
-                  "text": "{lunch.entre}"
+                  "text": "${entre}"
                 }
               ]
             },
@@ -88,7 +88,7 @@
               "items": [
                 {
                   "type": "TextBlock",
-                  "text": "{lunch.drink}"
+                  "text": "${drink}"
                 }
               ]
             }
