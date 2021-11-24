@@ -11,6 +11,7 @@ import com.google.common.io.Resources;
 import com.google.gson.Gson;
 import com.matthewcasperson.models.CardOptions;
 import com.matthewcasperson.models.LunchOrder;
+import com.matthewcasperson.repository.LunchOrderRepository;
 import com.microsoft.bot.builder.ConversationState;
 import com.microsoft.bot.builder.MessageFactory;
 import com.microsoft.bot.builder.StatePropertyAccessor;
@@ -25,6 +26,8 @@ import com.mitchellbosecke.pebble.template.PebbleTemplate;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.io.Writer;
+import java.sql.Timestamp;
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -32,6 +35,7 @@ import java.util.concurrent.CompletableFuture;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * This class implements the functionality of the Bot.
@@ -49,28 +53,47 @@ public class CateringBot extends FixedActivityHandler {
   private final ConversationState conversationState;
   private final UserState userState;
 
+  @Autowired
+  LunchOrderRepository lunchOrderRepository;
+
   public CateringBot(final ConversationState conversationState, final UserState userState) {
     this.userState = userState;
     this.conversationState = conversationState;
   }
 
   @Override
-  public CompletableFuture<Void> onTurn(TurnContext turnContext) {
-    return super.onTurn(turnContext)
-        // Save any state changes that might have occurred during the turn.
-        .thenCompose(turnResult -> conversationState.saveChanges(turnContext))
-        .thenCompose(saveResult -> userState.saveChanges(turnContext));
+  protected CompletableFuture<Void> onMembersAdded(
+      List<ChannelAccount> membersAdded,
+      TurnContext turnContext
+  ) {
+    LOGGER.info("CateringBot.onMembersAdded(List<ChannelAccount>, TurnContext)");
+
+    return membersAdded.stream()
+        .filter(
+            member -> !StringUtils
+                .equals(member.getId(), turnContext.getActivity().getRecipient().getId())
+        ).map(channel -> turnContext.sendActivity(MessageFactory.text(
+            "Hello and welcome! Type any message to begin placing a lunch order.")))
+        .collect(CompletableFutures.toFutureList()).thenApply(resourceResponses -> null);
   }
 
   @Override
   protected CompletableFuture<Void> onMessageActivity(TurnContext turnContext) {
     LOGGER.info("CateringBot.onMessageActivity(TurnContext)");
 
+    StatePropertyAccessor<LunchOrder> profileAccessor = userState.createProperty("lunch");
+    CompletableFuture<LunchOrder> lunchOrderFuture =
+        profileAccessor.get(turnContext, LunchOrder::new);
+
     try {
+      final LunchOrder lunchOrder = lunchOrderFuture.get();
+      lunchOrder.setActivityId(turnContext.getActivity().getId());
+      lunchOrder.setOrderCreated(Timestamp.from(Instant.now()));
+
       return turnContext.sendActivity(
           MessageFactory.attachment(createCardAttachment("cards/EntreOptions.json"))
       ).thenApply(sendResult -> null);
-    } catch (final IOException ex) {
+    } catch (final Exception ex) {
       return turnContext.sendActivity(
           MessageFactory.text("An exception was thrown: " + ex)
       ).thenApply(sendResult -> null);
@@ -101,6 +124,8 @@ public class CateringBot extends FixedActivityHandler {
           lunchOrder.setDrink(
               StringUtils.isAllEmpty(cardOptions.getCustom()) ? cardOptions.getOption()
                   : cardOptions.getCustom());
+        } else if (cardOptions.getCurrentCard() == Cards.Review.number) {
+          lunchOrderRepository.save(lunchOrder);
         }
 
         final AdaptiveCardInvokeResponse response = new AdaptiveCardInvokeResponse();
@@ -109,8 +134,8 @@ public class CateringBot extends FixedActivityHandler {
         response.setValue(createObjectFromJsonResource(
             Cards.findValueByTypeNumber(cardOptions.getNextCardToSend()).file,
             new HashMap<String, Object>() {{
-              put("drink", lunchOrder.drink);
-              put("entre", lunchOrder.entre);
+              put("drink", lunchOrder.getDrink());
+              put("entre", lunchOrder.getEntre());
             }}));
 
         return CompletableFuture.completedFuture(response);
@@ -125,19 +150,11 @@ public class CateringBot extends FixedActivityHandler {
   }
 
   @Override
-  protected CompletableFuture<Void> onMembersAdded(
-      List<ChannelAccount> membersAdded,
-      TurnContext turnContext
-  ) {
-    LOGGER.info("CateringBot.onMembersAdded(List<ChannelAccount>, TurnContext)");
-
-    return membersAdded.stream()
-        .filter(
-            member -> !StringUtils
-                .equals(member.getId(), turnContext.getActivity().getRecipient().getId())
-        ).map(channel -> turnContext.sendActivity(MessageFactory.text(
-            "Hello and welcome! Type any message to begin placing a lunch order.")))
-        .collect(CompletableFutures.toFutureList()).thenApply(resourceResponses -> null);
+  public CompletableFuture<Void> onTurn(TurnContext turnContext) {
+    return super.onTurn(turnContext)
+        // Save any state changes that might have occurred during the turn.
+        .thenCompose(turnResult -> conversationState.saveChanges(turnContext))
+        .thenCompose(saveResult -> userState.saveChanges(turnContext));
   }
 
   private Attachment createCardAttachment(final String fileName) throws IOException {
