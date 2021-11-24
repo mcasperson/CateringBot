@@ -4,11 +4,16 @@
 package com.matthewcasperson;
 
 import com.codepoetics.protonpack.collectors.CompletableFutures;
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Charsets;
 import com.google.common.io.Resources;
 import com.google.gson.Gson;
+import com.matthewcasperson.models.CardOptions;
+import com.matthewcasperson.models.LunchOrder;
 import com.microsoft.bot.builder.ConversationState;
 import com.microsoft.bot.builder.MessageFactory;
+import com.microsoft.bot.builder.StatePropertyAccessor;
 import com.microsoft.bot.builder.TurnContext;
 import com.microsoft.bot.builder.UserState;
 import com.microsoft.bot.schema.AdaptiveCardInvokeResponse;
@@ -64,12 +69,32 @@ public class CateringBot extends FixedActivityHandler {
       TurnContext turnContext, AdaptiveCardInvokeValue invokeValue) {
     LOGGER.info("CateringBot.onAdaptiveCardInvoke(TurnContext, AdaptiveCardInvokeValue)");
 
+    StatePropertyAccessor<LunchOrder> profileAccessor = userState.createProperty("lunch");
+    CompletableFuture<LunchOrder> lunchOrderFuture =
+        profileAccessor.get(turnContext, LunchOrder::new);
+
     try {
+      final LunchOrder lunchOrder = lunchOrderFuture.get();
       if ("order".equals(invokeValue.getAction().getVerb())) {
+
+        final CardOptions cardOptions = convertObject(invokeValue.getAction().getData(),
+            CardOptions.class);
+
+        if (cardOptions.getCurrentCard() == Cards.Entre.number) {
+          lunchOrder.setEntre(
+              StringUtils.isAllEmpty(cardOptions.getCustom()) ? cardOptions.getOption()
+                  : cardOptions.getCustom());
+        } else if (cardOptions.getCurrentCard() == Cards.Drink.number) {
+          lunchOrder.setDrink(
+              StringUtils.isAllEmpty(cardOptions.getCustom()) ? cardOptions.getOption()
+                  : cardOptions.getCustom());
+        }
+
         final AdaptiveCardInvokeResponse response = new AdaptiveCardInvokeResponse();
         response.setStatusCode(200);
         response.setType(CONTENT_TYPE);
-        response.setValue(createObjectFromJsonResource("cards/DrinkOptions.json"));
+        response.setValue(createObjectFromJsonResource(
+            Cards.findValueByTypeNumber(cardOptions.getNextCardToSend()).file));
         return CompletableFuture.completedFuture(response);
       }
 
@@ -114,4 +139,9 @@ public class CateringBot extends FixedActivityHandler {
     return Resources.toString(Resources.getResource(fileName), Charsets.UTF_8);
   }
 
+  private <T> T convertObject(final Object object, final Class<T> convertTo) {
+    final ObjectMapper objectMapper = new ObjectMapper();
+    objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+    return objectMapper.convertValue(object, convertTo);
+  }
 }
