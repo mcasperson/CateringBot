@@ -52,7 +52,6 @@ public class CateringBot extends FixedActivityHandler {
 
   private static final String CONTENT_TYPE = "application/vnd.microsoft.card.adaptive";
   private static final Logger LOGGER = LoggerFactory.getLogger(CateringBot.class);
-  private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
   private final ConversationState conversationState;
   private final UserState userState;
 
@@ -66,8 +65,8 @@ public class CateringBot extends FixedActivityHandler {
 
   @Override
   protected CompletableFuture<Void> onMembersAdded(
-      List<ChannelAccount> membersAdded,
-      TurnContext turnContext
+      final List<ChannelAccount> membersAdded,
+      final TurnContext turnContext
   ) {
     LOGGER.info("CateringBot.onMembersAdded(List<ChannelAccount>, TurnContext)");
 
@@ -81,11 +80,11 @@ public class CateringBot extends FixedActivityHandler {
   }
 
   @Override
-  protected CompletableFuture<Void> onMessageActivity(TurnContext turnContext) {
+  protected CompletableFuture<Void> onMessageActivity(final TurnContext turnContext) {
     LOGGER.info("CateringBot.onMessageActivity(TurnContext)");
 
-    StatePropertyAccessor<LunchOrder> profileAccessor = userState.createProperty("lunch");
-    CompletableFuture<LunchOrder> lunchOrderFuture =
+    final StatePropertyAccessor<LunchOrder> profileAccessor = userState.createProperty("lunch");
+    final CompletableFuture<LunchOrder> lunchOrderFuture =
         profileAccessor.get(turnContext, LunchOrder::new);
 
     try {
@@ -94,7 +93,7 @@ public class CateringBot extends FixedActivityHandler {
       lunchOrder.setOrderCreated(Timestamp.from(Instant.now()));
 
       return turnContext.sendActivity(
-          MessageFactory.attachment(createCardAttachment("cards/EntreOptions.json"))
+          MessageFactory.attachment(createCardAttachment(Cards.findValueByTypeNumber(0).file))
       ).thenApply(sendResult -> null);
     } catch (final Exception ex) {
       return turnContext.sendActivity(
@@ -105,7 +104,7 @@ public class CateringBot extends FixedActivityHandler {
 
   @Override
   protected CompletableFuture<AdaptiveCardInvokeResponse> onAdaptiveCardInvoke(
-      TurnContext turnContext, AdaptiveCardInvokeValue invokeValue) {
+      final TurnContext turnContext, final AdaptiveCardInvokeValue invokeValue) {
     LOGGER.info("CateringBot.onAdaptiveCardInvoke(TurnContext, AdaptiveCardInvokeValue)");
 
     StatePropertyAccessor<LunchOrder> profileAccessor = userState.createProperty("lunch");
@@ -131,8 +130,6 @@ public class CateringBot extends FixedActivityHandler {
           lunchOrderRepository.save(lunchOrder);
         }
 
-
-
         final AdaptiveCardInvokeResponse response = new AdaptiveCardInvokeResponse();
         response.setStatusCode(200);
         response.setType(CONTENT_TYPE);
@@ -156,7 +153,7 @@ public class CateringBot extends FixedActivityHandler {
   }
 
   @Override
-  public CompletableFuture<Void> onTurn(TurnContext turnContext) {
+  public CompletableFuture<Void> onTurn(final TurnContext turnContext) {
     return super.onTurn(turnContext)
         // Save any state changes that might have occurred during the turn.
         .thenCompose(turnResult -> conversationState.saveChanges(turnContext))
@@ -211,9 +208,9 @@ public class CateringBot extends FixedActivityHandler {
     final Map<String, String> map = new HashMap<>();
 
     for (int i = 0; i < 3; ++i) {
-      map.put("drink" + (i +1), recentOrders.get(i).getDrink());
-      map.put("entre" + (i +1), recentOrders.get(i).getEntre());
-      map.put("orderCreated" + (i +1), recentOrders.get(i).getOrderCreated().toString());
+      map.put("drink" + (i + 1), recentOrders.get(i).getDrink());
+      map.put("entre" + (i + 1), recentOrders.get(i).getEntre());
+      map.put("orderCreated" + (i + 1), recentOrders.get(i).getOrderCreated().toString());
     }
 
     return map;
