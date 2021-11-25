@@ -207,9 +207,13 @@ public class CateringBot extends FixedActivityHandler {
     final Map<String, String> map = new HashMap<>();
 
     for (int i = 0; i < 3; ++i) {
-      map.put("drink" + (i + 1), recentOrders.get(i).getDrink());
-      map.put("entre" + (i + 1), recentOrders.get(i).getEntre());
-      map.put("orderCreated" + (i + 1), recentOrders.get(i).getOrderCreated().toString());
+      map.put("drink" + (i + 1),
+          recentOrders.stream().skip(i).findFirst().map(LunchOrder::getDrink).orElse(""));
+      map.put("entre" + (i + 1),
+          recentOrders.stream().skip(i).findFirst().map(LunchOrder::getEntre).orElse(""));
+      map.put("orderCreated" + (i + 1),
+          recentOrders.stream().skip(i).findFirst().map(l -> l.getOrderCreated().toString())
+              .orElse(""));
     }
 
     return map;
