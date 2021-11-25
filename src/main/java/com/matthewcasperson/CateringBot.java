@@ -196,7 +196,6 @@ public class CateringBot extends FixedActivityHandler {
   }
 
   private <T> T convertObject(final Object object, final Class<T> convertTo) {
-
     return OBJECT_MAPPER.convertValue(object, convertTo);
   }
 
