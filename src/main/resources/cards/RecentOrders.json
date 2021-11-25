@@ -68,7 +68,15 @@
               "items": [
                 {
                   "type": "TextBlock",
-                  "text": "${orderCreated}"
+                  "text": "{{orderCreated1}}"
+                },
+                {
+                  "type": "TextBlock",
+                  "text": "{{orderCreated2}}"
+                },
+                {
+                  "type": "TextBlock",
+                  "text": "{{orderCreated3}}"
                 }
               ]
             },
@@ -78,7 +86,15 @@
               "items": [
                 {
                   "type": "TextBlock",
-                  "text": "${entre}"
+                  "text": "{{entre1}}"
+                },
+                {
+                  "type": "TextBlock",
+                  "text": "{{entre2}}"
+                },
+                {
+                  "type": "TextBlock",
+                  "text": "{{entre3}}"
                 }
               ]
             },
@@ -88,12 +104,19 @@
               "items": [
                 {
                   "type": "TextBlock",
-                  "text": "${drink}"
+                  "text": "{{drink1}}"
+                },
+                {
+                  "type": "TextBlock",
+                  "text": "{{drink2}}"
+                },
+                {
+                  "type": "TextBlock",
+                  "text": "{{drink3}}"
                 }
               ]
             }
-          ],
-          "$data": "{users}"
+          ]
         }
       ]
     }

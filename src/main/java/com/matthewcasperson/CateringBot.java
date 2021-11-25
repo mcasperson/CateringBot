@@ -36,6 +36,8 @@ import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 
 /**
  * This class implements the functionality of the Bot.
@@ -50,6 +52,7 @@ public class CateringBot extends FixedActivityHandler {
 
   private static final String CONTENT_TYPE = "application/vnd.microsoft.card.adaptive";
   private static final Logger LOGGER = LoggerFactory.getLogger(CateringBot.class);
+  private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
   private final ConversationState conversationState;
   private final UserState userState;
 
@@ -128,14 +131,17 @@ public class CateringBot extends FixedActivityHandler {
           lunchOrderRepository.save(lunchOrder);
         }
 
+
+
         final AdaptiveCardInvokeResponse response = new AdaptiveCardInvokeResponse();
         response.setStatusCode(200);
         response.setType(CONTENT_TYPE);
         response.setValue(createObjectFromJsonResource(
             Cards.findValueByTypeNumber(cardOptions.getNextCardToSend()).file,
-            new HashMap<String, Object>() {{
+            new HashMap<>() {{
               put("drink", lunchOrder.getDrink());
               put("entre", lunchOrder.getEntre());
+              putAll(getRecentOrdersMap());
             }}));
 
         return CompletableFuture.completedFuture(response);
@@ -181,7 +187,7 @@ public class CateringBot extends FixedActivityHandler {
 
   private String processTemplate(final String template, final Map<String, Object> context)
       throws IOException {
-    final PebbleEngine engine = new PebbleEngine.Builder().build();
+    final PebbleEngine engine = new PebbleEngine.Builder().autoEscaping(false).build();
     final PebbleTemplate compiledTemplate = engine.getLiteralTemplate(template);
     final Writer writer = new StringWriter();
     compiledTemplate.evaluate(writer, context);
@@ -196,5 +202,20 @@ public class CateringBot extends FixedActivityHandler {
     final ObjectMapper objectMapper = new ObjectMapper();
     objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
     return objectMapper.convertValue(object, convertTo);
+  }
+
+  private Map<String, String> getRecentOrdersMap() {
+    final List<LunchOrder> recentOrders = lunchOrderRepository.findAll(
+        PageRequest.of(0, 3, Sort.by(Sort.Order.desc("orderCreated")))).getContent();
+
+    final Map<String, String> map = new HashMap<>();
+
+    for (int i = 0; i < 3; ++i) {
+      map.put("drink" + (i +1), recentOrders.get(i).getDrink());
+      map.put("entre" + (i +1), recentOrders.get(i).getEntre());
+      map.put("orderCreated" + (i +1), recentOrders.get(i).getOrderCreated().toString());
+    }
+
+    return map;
   }
 }
