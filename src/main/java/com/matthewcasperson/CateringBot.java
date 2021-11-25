@@ -8,7 +8,6 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Charsets;
 import com.google.common.io.Resources;
-import com.google.gson.Gson;
 import com.matthewcasperson.models.CardOptions;
 import com.matthewcasperson.models.LunchOrder;
 import com.matthewcasperson.repository.LunchOrderRepository;
@@ -52,6 +51,8 @@ public class CateringBot extends FixedActivityHandler {
 
   private static final String CONTENT_TYPE = "application/vnd.microsoft.card.adaptive";
   private static final Logger LOGGER = LoggerFactory.getLogger(CateringBot.class);
+  private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper()
+      .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
   private final ConversationState conversationState;
   private final UserState userState;
 
@@ -177,7 +178,7 @@ public class CateringBot extends FixedActivityHandler {
     final String processedResource = context == null
         ? resource
         : processTemplate(resource, context);
-    final Map<String, String[]> objectMap = new Gson().fromJson(processedResource, Map.class);
+    final Map objectMap = OBJECT_MAPPER.readValue(processedResource, Map.class);
     return objectMap;
   }
 
@@ -195,9 +196,8 @@ public class CateringBot extends FixedActivityHandler {
   }
 
   private <T> T convertObject(final Object object, final Class<T> convertTo) {
-    final ObjectMapper objectMapper = new ObjectMapper();
-    objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-    return objectMapper.convertValue(object, convertTo);
+
+    return OBJECT_MAPPER.convertValue(object, convertTo);
   }
 
   private Map<String, String> getRecentOrdersMap() {
