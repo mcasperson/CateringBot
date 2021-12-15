@@ -45,14 +45,14 @@ jobs:
 #     - name: Test
 #       run: ./mvnw --batch-mode -Dmaven.test.failure.ignore=true test
 #       shell: bash
-    - if: always()
-      name: Report
-      uses: dorny/test-reporter@v1
-      with:
-        name: Maven Tests
-        path: target/surefire-reports/*.xml
-        reporter: java-junit
-        fail-on-error: 'false'
+#     - if: always()
+#       name: Report
+#       uses: dorny/test-reporter@v1
+#       with:
+#         name: Maven Tests
+#         path: target/surefire-reports/*.xml
+#         reporter: java-junit
+#         fail-on-error: 'false'
     - name: Package
       run: ./mvnw --batch-mode -DskipTests=true package
       shell: bash
