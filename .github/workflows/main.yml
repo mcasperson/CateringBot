@@ -42,9 +42,9 @@ jobs:
       with:
         name: Dependencies Updates
         path: dependencyUpdates.txt
-    - name: Test
-      run: ./mvnw --batch-mode -Dmaven.test.failure.ignore=true test
-      shell: bash
+#     - name: Test
+#       run: ./mvnw --batch-mode -Dmaven.test.failure.ignore=true test
+#       shell: bash
     - if: always()
       name: Report
       uses: dorny/test-reporter@v1
